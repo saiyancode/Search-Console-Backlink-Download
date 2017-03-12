@@ -7,8 +7,19 @@ import os
 import re
 import sqlite3
 from bs4 import BeautifulSoup
+from mozscape import Mozscape
+from creds import user, password, client
+import shutil
 
-from creds import user, password
+class grab_da():
+
+    def __init__(self, domain):
+        mozMetrics = client.urlMetrics(domain)
+        self.da = mozMetrics['pda']
+
+    def authority(self):
+        return self.da
+
 
 # chromeOptions = webdriver.ChromeOptions()
 # #prefs = {"download.default_directory" : "C:\\Users\\william.cecil\\Desktop\\RawBacklinks"}
@@ -117,15 +128,33 @@ def process_insights(project):
             db.commit()
             continue
 
+    domains = cursor.execute('SELECT DISTINCT DOMAIN FROM CAMPAIGNS WHERE DA = 0')
+    domains = domains.fetchall()
+    domains = [x[0] for x in domains]
+
+    for domain in domains:
+        print(domain)
+        da = grab_da(domain)
+        final = da.authority()
+        print(str(final))
+        cursor.execute('UPDATE CAMPAIGNS SET DA = "{a}" WHERE DOMAIN = "{c}"'.format(a=final, c=domain))
+        db.commit()
+        time.sleep(10)
+
+def archive_downloads(downloads):
+    destination = '/users/willcecil/desktop/search-console/archived/'
+    for file in downloads:
+        shutil.move(file, destination)
+
 def main():
     create_tables(db,cursor)
     #login()
     #get_links()
-    #ime.sleep(60)
+    #time.sleep(60)
     downloads = glob.glob('/users/willcecil/desktop/search-console/raw-backlinks/*.csv')
     store_links(downloads)
     for project in projects:
         process_insights(project)
-    archive_downloads()
+    archive_downloads(downloads)
 
 main()
